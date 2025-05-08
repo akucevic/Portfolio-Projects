@@ -1,0 +1,125 @@
+# Assignment 7
+library(readr)
+myeloma <- read_csv("Downloads/myeloma.csv")
+library(survival)
+cox_model <- coxph(Surv(Time, VStatus) ~ LogBUN + HGB + Age + SCalc, data = myeloma)
+cox.zph(cox_model, transform = "km")
+# Summary: To see if the Cox Proportional Hazards Assumption is violated we conducted a Shoenfelds Residual
+# test. We see that LogBUN massively violates the assumption with a p-value of near 0. SCalc slightly
+# violates it with a p-value of around 0.07. Age and HGB satisfy the assumption as they both have
+# high p-values. 
+
+# Goodness of Fit Test
+myeloma$lin_pred <- predict(cox_model, type = "lp")
+
+myeloma$group <- cut(myeloma$lin_pred,
+                     breaks = quantile(myeloma$lin_pred,
+                                       probs = seq(0, 1, by = 0.1),
+                                       na.rm = TRUE),
+                     include.lowest = TRUE, labels = FALSE)
+
+myeloma$group <- factor(myeloma$group)
+
+cox_full <- coxph(Surv(Time, VStatus) ~ LogBUN + HGB + Age + SCalc + group,
+                  data = myeloma)
+
+anova(cox_model, cox_full, test = "LRT")
+
+# Summary: Given the test statistics from the grouping factor suggests that adding the grouping
+# variable doesn't improve the model by a significant amount as seen with the high p-value (0.531)
+# and the high Chi-Square (8.03). These test statistics show us that the original Cox Model did a 
+# sufficeintly good job in capturing the relationship between predictors and survival.
+
+# Detect Outliers
+
+mart_resid <- resid(cox_model, type = "martingale")
+
+mart_outliers <- which(abs(mart_resid) > 2)
+     
+dev_resid <- resid(cox_model, type = "deviance")
+     
+dev_outliers <- which(abs(dev_resid) > 2)
+     
+combined_outliers <- intersect(mart_outliers, dev_outliers)
+cat("Obs. flagged as outliers by both martingale & deviance residuals:\n",
+    combined_outliers)
+
+myeloma$predicted_risk <- predict(cox_model, type = "risk")
+
+summary(myeloma[["predicted_risk"]])
+
+myeloma[combined_outliers,
+         c("Time", "VStatus", "LogBUN", "HGB",
+           "Age", "SCalc", "predicted_risk")]
+# Summary: The outlier detection analysis used martingale and deviance residuals to identify
+# observations with unusually large residuals (abs > 2), which may indicate poor
+# model fit or influential data points. Observation 48 was flagged as a potential outlier by both
+# residual types, suggesting that its survival time or predictor values deviate notably from model
+# expectations. However, further examination reveals that its predicted risk (1.15) is within a
+# reasonable range compared to the dataset’s maximum risk (11.51), meaning it may not be a
+# true outlier in terms of influencing model predictions.
+
+
+
+dfbetas_values <- residuals(cox_model, type = "dfbeta")
+score_resid <- residuals(cox_model, type = "score")
+
+std_score_resid <- apply(score_resid, 2, function(x) x / sd(x))
+
+dffits_scores <- apply(std_score_resid, 1, max) 
+
+cooks_d <- dffits_scores^2 / (ncol(dfbetas_values) * mean(dffits_scores^2))
+
+cov_ratio <- 1 / (1 - score_resid^2) 
+influence_measures <- list(
+  DFBETAS = apply(abs(dfbetas_values), 1, max), 
+  Score_Resid = apply(abs(score_resid), 1, max),
+  Cooks_D = cooks_d,
+  DFFITS = dffits_scores,
+  COVRATIO = apply(abs(cov_ratio - 1), 1, max)
+)
+
+ranked_obs <- lapply(influence_measures, function(x) order(-x))
+
+top_1_percent <- lapply(influence_measures, function(x) {
+  threshold <- quantile(x, 0.99) 
+  which(x > threshold)
+})
+
+obs_counts <- table(unlist(top_1_percent))
+obs_counts
+
+
+highly_infl_obs <- as.numeric(names(obs_counts[obs_counts == 2]))
+moderate_infl_obs <- as.numeric(names(obs_counts[obs_counts == 1]))
+
+myeloma[highly_infl_obs, c("Time", "VStatus", "LogBUN", "HGB",
+                           "Age", "SCalc", "predicted_risk")]
+
+myeloma[moderate_infl_obs, c("Time", "VStatus", "LogBUN", "HGB",
+                             "Age", "SCalc", "predicted_risk")]
+# Summary: To assess the influence of individual observations on the Cox model, several diagnostic measures were computed, including DFBETAS, score residuals, Cook’s distance, DFFITS,
+# and Covariance Ratio (COVRATIO). Each measure captures a different aspect of influence,
+# and observations were ranked based on their values across these statistics. To identify highly
+# influential points, we examined the top 1% of observations for each measure and counted how
+# frequently an observation appeared in these influence lists.
+# The results revealed that Observation 2 was flagged in at least two of the top influence lists,
+# suggesting it has a strong potential influence on the model estimates. This suggests that it may disproportionately
+# affect survival predictions, possibly due to extreme predictor values or an unusually short
+# survival time. In contrast, Observations 1, 13, and 40 were identified as moderately influential, appearing in only one of the influence measures. While these observations had elevated
+# predicted risks, their influence on the overall model is likely less
+# critical compared to Observation 2.  
+  
+  
+  
+  
+  
+  
+  
+  
+
+
+
+
+
+
