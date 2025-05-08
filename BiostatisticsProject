@@ -1,0 +1,43 @@
+# Create histograms for the variables
+library(ggplot2)
+ggplot(data = studydata_agd, aes(x = FG_6)) +
+  geom_histogram(binwidth = 5, aes(fill = factor(RACE)), position = "dodge") +
+  ggtitle("Histogram of fasting glucose by race at 6 months") +
+  xlab("Fasting glucose at 6 months") +
+  ylab("Number of participants") +
+  scale_fill_discrete(name = "Race", labels = c("0" = "Caucasian", "1" = "Latina", "2" = "African American")) +
+  facet_wrap(~ RACE)
+
+ggplot(data = studydata_agd, aes(x = FG_3)) +
+  geom_histogram(binwidth = 5, aes(fill = factor(RACE)), position = "dodge") +
+  ggtitle("Histogram of fasting glucose by race at 3 months") +
+  xlab("Fasting glucose at 3 months") +
+  ylab("Number of participants") +
+  scale_fill_discrete(name = "Race", labels = c("0" = "Caucasian", "1" = "Latina", "2" = "African American")) +
+  facet_wrap(~ RACE)
+
+ggplot(data = studydata_agd, aes(x = FG_BL)) +
+  geom_histogram(binwidth = 5, aes(fill = factor(RACE)), position = "dodge") +
+  ggtitle("Histogram of fasting glucose by race at basline") +
+  xlab("Fasting glucose at baseline") +
+  ylab("Number of participants") +
+  scale_fill_discrete(name = "Race", labels = c("0" = "Caucasian", "1" = "Latina", "2" = "African American")) +
+  facet_wrap(~ RACE)
+
+
+min(EXR_C02_S03_01$pindex)
+max(EXR_C02_S03_01$pindex)
+sum(EXR_C02_S03_01$pindex<0.50 & EXR_C02_S03_01$pindex >=0.00)
+sum(EXR_C02_S03_01$pindex<0.99 & EXR_C02_S03_01$pindex >=0.50)
+sum(EXR_C02_S03_01$pindex<1.49 & EXR_C02_S03_01$pindex >=1.00)
+sum(EXR_C02_S03_01$pindex<1.99 & EXR_C02_S03_01$pindex >=1.50)
+sum(EXR_C02_S03_01$pindex<2.49 & EXR_C02_S03_01$pindex >=2.00)
+sum(EXR_C02_S03_01$pindex<2.99 & EXR_C02_S03_01$pindex >=2.50)
+f<- c(3,3,15,15,45,9)
+(f/90)*100
+sum(f/90)*100
+cumsum(f)
+cumsum(f/90)
+round(((f/90)*100), digits=2)
+
+
